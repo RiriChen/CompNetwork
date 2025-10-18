@@ -65,13 +65,13 @@ SET_NTP_LI_VN_MODE(packet, NTP_LI_UNSYNC, NTP_VERSION, NTP_MODE_CLIENT);
 **Visual Example - Bit Packing Walkthrough:**
 
 Let's build li_vn_mode for a client request:
-- Leap Indicator (LI) = 3 (unsynchronized)  
+- Leap Indicator (LI) = 3 (unsynchronized)
 - Version (VN) = 4 (NTP version 4)
 - Mode = 3 (client request)
 
 Step 1: Convert to binary
 - LI = 3  = 11 (binary)
-- VN = 4  = 100 (binary) 
+- VN = 4  = 100 (binary)
 - Mode = 3 = 011 (binary)
 
 Step 2: Pack into single byte
@@ -92,9 +92,9 @@ SET_NTP_LI_VN_MODE(packet, 3, 4, 3);
 - **Leap Indicator (2 bits)**: Warns about leap seconds
   - **0 = No warning**: Normal operation
   - **1 = Last minute has 61 seconds**: Leap second will be added
-  - **2 = Last minute has 59 seconds**: Leap second will be deleted  
+  - **2 = Last minute has 59 seconds**: Leap second will be deleted
   - **3 = Clock unsynchronized**: What clients should send (means "I don't know")
-  
+
   *What's a leap second?* Earth's rotation isn't perfectly constant, so occasionally we add or remove a second to keep atomic time aligned with astronomical time. Most students can ignore this - just use "3" for client requests.
 
 - **Version Number (3 bits)**: NTP protocol version
@@ -129,7 +129,7 @@ An **epoch** is simply the starting point for counting time in a computer system
 - Right now: ~1727789000 seconds since 1970
 - Why 1970? Unix was developed in early 1970s
 
-**NTP Time (used by time servers):**  
+**NTP Time (used by time servers):**
 - Starts: January 1, 1900, 00:00:00 UTC
 - Right now: ~3936777800 seconds since 1900
 - Why 1900? Covers entire 20th century and beyond
@@ -139,8 +139,8 @@ An **epoch** is simply the starting point for counting time in a computer system
 1900 -------- 1970 -------- 2025
  |              |              |
 NTP             Unix           Now
-epoch           epoch          
-starts          starts         
+epoch           epoch
+starts          starts
  |<-- 70 years ->|<-- 55 years ->|
  |<------- 125 years total ----->|
 ```
@@ -179,7 +179,7 @@ The packet contains four timestamps:
    - Symptom: Times show up as 1900 or way in the future
    - Fix: Always add/subtract NTP_EPOCH_OFFSET
 
-2. **Converting in wrong direction**  
+2. **Converting in wrong direction**
    - Symptom: Times are 70 years off
    - Fix: NTP times are BIGGER, Unix times are SMALLER
 
@@ -353,3 +353,6 @@ Submit the following files:
 - [NIST Time Services](https://www.nist.gov/pml/time-and-frequency-division/services/internet-time-service-its)
 
 Remember: The goal isn't just to make it work, but to understand how network time synchronization enables the modern internet!
+
+## Brief Description
+For this project, I implemented an NTP client that constructs and sends a properly formatted request packet to a server, receives the response, and parses key fields such as timestamps, version, mode, and stratum. The main challenge I faced was handling endianness when converting between NTP’s 64-bit timestamp format and human-readable Unix time.
