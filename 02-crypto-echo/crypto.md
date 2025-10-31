@@ -135,7 +135,7 @@ The cipher maps byte values 0-63 to printable ASCII characters:
 
 ```
 Index  0-25:  A-Z  (uppercase letters)
-Index 26-51:  a-z  (lowercase letters)  
+Index 26-51:  a-z  (lowercase letters)
 Index 52-61:  0-9  (digits)
 Index    62:  ' '  (space)
 Index    63:  ','  (comma)
@@ -183,7 +183,7 @@ Server's key = [d2, e1] = [35, 7]
   - Encrypt outgoing messages with d2 (35)
   - Decrypt incoming messages with e1 (7)
 
-Client's key = [d1, e2] = [55, 11]  
+Client's key = [d1, e2] = [55, 11]
   - Encrypt outgoing messages with d1 (55)
   - Decrypt incoming messages with e2 (11)
 ```
@@ -321,8 +321,8 @@ if (encrypted_len > 0) {
 
 ```c
 uint8_t decrypted[100];
-int decrypted_len = decrypt_string(session_key, decrypted, 
-                                    received_pdu->payload, 
+int decrypted_len = decrypt_string(session_key, decrypted,
+                                    received_pdu->payload,
                                     received_pdu->header.payload_len);
 
 if (decrypted_len > 0) {
@@ -372,7 +372,7 @@ if (session_key == NULL_CRYPTO_KEY) {
 ### Character Restrictions
 
 Only these characters work in encrypted messages:
-- Letters: A-Z, a-z  
+- Letters: A-Z, a-z
 - Digits: 0-9
 - Space and comma: ' ', ','
 
@@ -429,8 +429,8 @@ Only these characters work in encrypted messages:
 print_msg_info(msg, session_key, CLIENT_MODE);
 
 // Print key values
-printf("Server key: 0x%04x (enc=%d, dec=%d)\n", 
-       server_key, 
+printf("Server key: 0x%04x (enc=%d, dec=%d)\n",
+       server_key,
        GET_ENCRYPTION_KEY(server_key),
        GET_DECRYPTION_KEY(server_key));
 
@@ -475,12 +475,12 @@ printf("Original: %s, Decrypted: %s\n", test, dec);
 6. **What would we need to add for production use?**
    <details><summary>Answer</summary>
    - Much larger keyspace (2048+ bit keys)
-   - Padding/randomization to prevent pattern analysis  
+   - Padding/randomization to prevent pattern analysis
    - Authentication (digital signatures)
    - Integrity checking (HMAC or authenticated encryption)
    - Secure key exchange protocol (like Diffie-Hellman)
    - Forward secrecy (new keys for each session)
-   
+
    In practice, use established standards like TLS 1.3 with AES-GCM!
    </details>
 

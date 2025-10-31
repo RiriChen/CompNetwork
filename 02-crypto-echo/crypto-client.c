@@ -2,16 +2,16 @@
  * =============================================================================
  * STUDENT ASSIGNMENT: CRYPTO-CLIENT.C
  * =============================================================================
- * 
+ *
  * ASSIGNMENT OBJECTIVE:
  * Implement a TCP client that communicates with a server using an encrypted
  * protocol. Your focus is on socket programming and network communication.
  * The cryptographic functions are provided for you in crypto-lib.
- * 
+ *
  * =============================================================================
  * WHAT YOU NEED TO IMPLEMENT:
  * =============================================================================
- * 
+ *
  * 1. SOCKET CONNECTION (start_client function):
  *    - Create a TCP socket using socket()
  *    - Configure the server address structure (struct sockaddr_in)
@@ -19,7 +19,7 @@
  *    - Handle connection errors appropriately
  *    - Call your communication loop function
  *    - Close the socket when done
- * 
+ *
  * 2. CLIENT COMMUNICATION LOOP:
  *    - Create a function that handles the request/response cycle
  *    - Allocate buffers for sending and receiving data
@@ -32,7 +32,7 @@
  *      e) Process the response (extract key, decrypt data, etc.)
  *      f) Handle exit commands and connection closures
  *    - Free allocated buffers before returning
- * 
+ *
  * 3. PDU CONSTRUCTION:
  *    - Consider creating a helper function to build PDUs
  *    - Fill in the PDU header (msg_type, direction, payload_len)
@@ -41,13 +41,13 @@
  *    - For MSG_KEY_EXCHANGE: no payload needed
  *    - For command messages: no payload needed
  *    - Return the total PDU size (header + payload)
- * 
+ *
  * =============================================================================
  * ONE APPROACH TO SOLVE THIS PROBLEM:
  * =============================================================================
- * 
+ *
  * FUNCTION STRUCTURE:
- * 
+ *
  * void start_client(const char* addr, int port) {
  *     // 1. Create TCP socket
  *     // 2. Configure server address (sockaddr_in)
@@ -57,7 +57,7 @@
  *     // 6. Close socket
  *     // 7. Print disconnection message
  * }
- * 
+ *
  * int client_loop(int socket_fd) {
  *     // 1. Allocate buffers (send, receive, input)
  *     // 2. Initialize session_key to NULL_CRYPTO_KEY
@@ -76,7 +76,7 @@
  *     // 4. Free buffers
  *     // 5. Return success/error code
  * }
- * 
+ *
  * int build_packet(const msg_cmd_t *cmd, crypto_msg_t *pdu, crypto_key_t key) {
  *     // 1. Set pdu->header.msg_type = cmd->cmd_id
  *     // 2. Set pdu->header.direction = DIR_REQUEST
@@ -87,30 +87,30 @@
  *     //    - Command messages: set length to 0
  *     // 4. Return sizeof(crypto_pdu_t) + payload_len
  * }
- * 
+ *
  * =============================================================================
  * IMPORTANT PROTOCOL DETAILS:
  * =============================================================================
- * 
+ *
  * PDU STRUCTURE:
  *   typedef struct crypto_pdu {
  *       uint8_t  msg_type;      // MSG_DATA, MSG_ENCRYPTED_DATA, etc.
  *       uint8_t  direction;     // DIR_REQUEST or DIR_RESPONSE
  *       uint16_t payload_len;   // Length of payload in bytes
  *   } crypto_pdu_t;
- * 
+ *
  *   typedef struct crypto_msg {
  *       crypto_pdu_t header;
  *       uint8_t      payload[]; // Flexible array
  *   } crypto_msg_t;
- * 
+ *
  * MESSAGE TYPES (from protocol.h):
  *   MSG_KEY_EXCHANGE     - Request/send encryption key
  *   MSG_DATA             - Plain text message
  *   MSG_ENCRYPTED_DATA   - Encrypted message (requires session key)
  *   MSG_CMD_CLIENT_STOP  - Client exit command
  *   MSG_CMD_SERVER_STOP  - Server shutdown command
- * 
+ *
  * TYPICAL MESSAGE FLOW:
  *   1. Client sends MSG_KEY_EXCHANGE request
  *   2. Server responds with MSG_KEY_EXCHANGE + key in payload
@@ -118,46 +118,46 @@
  *   4. Client can now send MSG_ENCRYPTED_DATA
  *   5. Server responds with MSG_ENCRYPTED_DATA
  *   6. Client decrypts using decrypt_string()
- * 
+ *
  * =============================================================================
  * CRYPTO LIBRARY FUNCTIONS YOU'LL USE:
  * =============================================================================
- * 
+ *
  * int encrypt_string(crypto_key_t key, uint8_t *out, uint8_t *in, size_t len)
  *   - Encrypts a string before sending
  *   - Returns number of encrypted bytes or negative on error
- * 
+ *
  * int decrypt_string(crypto_key_t key, uint8_t *out, uint8_t *in, size_t len)
  *   - Decrypts received data
  *   - Returns number of decrypted chars or negative on error
  *   - NOTE: Output is NOT null-terminated, you must add '\0'
- * 
+ *
  * void print_msg_info(crypto_msg_t *msg, crypto_key_t key, int mode)
  *   - Prints PDU details for debugging
  *   - Use CLIENT_MODE for the mode parameter
  *   - VERY helpful for debugging your protocol!
- * 
+ *
  * =============================================================================
  * DEBUGGING TIPS:
  * =============================================================================
- * 
+ *
  * 1. Use print_msg_info() before sending and after receiving
  * 2. Check return values from ALL socket operations
  * 3. Verify payload_len matches actual data length
  * 4. Remember: recv() may return less bytes than expected
  * 5. Encrypted data requires a valid session key (check for NULL_CRYPTO_KEY)
  * 6. Use printf() liberally to trace program flow
- * 
+ *
  * =============================================================================
  * TESTING RECOMMENDATIONS:
  * =============================================================================
- * 
+ *
  * 1. Start simple: Get plain MSG_DATA working first
  * 2. Test key exchange: Send '#' command
  * 3. Test encryption: Send '!message' after key exchange
  * 4. Test exit commands: '-' for client exit, '=' for server shutdown
  * 5. Test error cases: What if server closes unexpectedly?
- * 
+ *
  * Good luck! Remember: Focus on the socket operations. The crypto is done!
  * =============================================================================
  */
@@ -173,6 +173,8 @@
 #include "crypto-lib.h"
 #include "protocol.h"
 
+int client_loop(int sockfd);
+int build_packet(const msg_cmd_t *cmd, crypto_msg_t *pdu, crypto_key_t key);
 
 /* =============================================================================
  * STUDENT TODO: IMPLEMENT THIS FUNCTION
@@ -182,26 +184,167 @@
  * 2. Connect to the server
  * 3. Call your communication loop
  * 4. Clean up and close the socket
- * 
+ *
  * Parameters:
  *   addr - Server IP address (e.g., "127.0.0.1")
  *   port - Server port number (e.g., 1234)
  */
 void start_client(const char* addr, int port) {
-    printf("Student TODO: Implement start_client()\n");
-    printf("  - Create TCP socket\n");
-    printf("  - Connect to %s:%d\n", addr, port);
-    printf("  - Implement communication loop\n");
-    printf("  - Close socket when done\n");
+    int sockfd;
+    struct sockaddr_in server_addr;
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        perror("Error creating socket");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(port);
+
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Error connecting to server");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    if (inet_pton(AF_INET, addr, &server_addr.sin_addr) <= 0) {
+        fprintf(stderr, "Error: Invalid address %s\n", addr);
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Connected to server %s:%d\n", addr, port);
+    printf("Type messages to send to server.\n");
+    printf("Type 'exit' to quit, or 'exit server' to shutdown the server.\n");
+    printf("Press Ctrl+C to exit at any time.\n\n");
+
+    client_loop(sockfd);
+
+    close(sockfd);
+    printf("Client disconnected.\n");
 }
 
+int client_loop(int sockfd) {
+    char input_buffer[MAX_MSG_DATA_SIZE];
+    uint8_t send_buffer[BUFFER_SIZE];
+    uint8_t receive_buffer[BUFFER_SIZE];
+    msg_cmd_t command;
+    crypto_key_t session_key = NULL_CRYPTO_KEY;
+
+    while (1) {
+        int cmd_result = get_command(input_buffer, MAX_MSG_DATA_SIZE, &command);
+
+        if (cmd_result != CMD_EXECUTE) {
+            continue;
+        }
+
+        if (command.cmd_id == MSG_ENCRYPTED_DATA && session_key == NULL_CRYPTO_KEY) {
+            printf("[ERROR] No session key established. Cannot send encrypted data.\n\n");
+            continue;
+        }
+
+        memset(send_buffer, 0, BUFFER_SIZE);
+        crypto_msg_t *request_pdu = (crypto_msg_t *)send_buffer;
+
+        int pdu_size = build_packet(&command, request_pdu, session_key);
+        if (pdu_size < 0) {
+            printf("[ERROR] Failed to build request PDU\n\n");
+            continue;
+        }
+
+        print_msg_info(request_pdu, session_key, CLIENT_MODE);
+
+        ssize_t sent = send(sockfd, send_buffer, pdu_size, 0);
+        if (sent < 0) {
+            printf("Error sending message.\n");
+            break;
+        }
+
+        if (command.cmd_id == MSG_CMD_CLIENT_STOP) {
+            printf("Exiting client...\n");
+            break;
+        }
+        if (command.cmd_id == MSG_CMD_SERVER_STOP) {
+            printf("Server shutdown requested. Exiting client...\n");
+            break;
+        }
+
+        memset(receive_buffer, 0, BUFFER_SIZE);
+        ssize_t received = recv(sockfd, receive_buffer, BUFFER_SIZE, 0);
+
+        if (received == 0) {
+            printf("Server closed connection\n");
+            break;
+        }
+        else if (received < 0) {
+            printf("Error receiving response.\n");
+            break;
+        }
+
+        crypto_msg_t *response_pdu = (crypto_msg_t *)receive_buffer;
+
+        if (response_pdu->header.msg_type == MSG_KEY_EXCHANGE) {
+            if (response_pdu->header.payload_len == sizeof(crypto_key_t)) {
+                memcpy(&session_key, response_pdu->payload, sizeof(crypto_key_t));
+            }
+        }
+
+        print_msg_info(response_pdu, session_key, CLIENT_MODE);
+    }
+
+    return RC_OK;
+}
+
+int build_packet(const msg_cmd_t *cmd, crypto_msg_t *pdu, crypto_key_t key) {
+    pdu->header.msg_type = cmd->cmd_id;
+    pdu->header.direction = DIR_REQUEST;
+
+    switch (cmd->cmd_id) {
+        case MSG_DATA:
+            if (cmd->cmd_line) {
+                size_t str_len = strlen(cmd->cmd_line);
+                memcpy(pdu->payload, cmd->cmd_line, str_len);
+                pdu->header.payload_len = str_len;
+            }
+            else {
+                pdu->header.payload_len = 0;
+            }
+            break;
+        case MSG_ENCRYPTED_DATA:
+            if (cmd->cmd_line) {
+                size_t str_len = strlen(cmd->cmd_line);
+                int encrypted_len = encrypt_string(key, pdu->payload, (uint8_t *)cmd->cmd_line, str_len);
+                if (encrypted_len < 0) {
+                    printf("[ERROR] Encryption failed\n");
+                    return -1;
+                }
+                pdu->header.payload_len = encrypted_len;
+            }
+            else {
+                pdu->header.payload_len = 0;
+            }
+            break;
+        case MSG_KEY_EXCHANGE:
+        case MSG_CMD_CLIENT_STOP:
+        case MSG_CMD_SERVER_STOP:
+            pdu->header.payload_len = 0;
+            break;
+        default:
+            printf("[ERROR] Unknown message type: %d\n", cmd->cmd_id);
+            return -1;
+    }
+
+    return sizeof(crypto_pdu_t) + pdu->header.payload_len;
+}
 
 /* =============================================================================
  * PROVIDED HELPER FUNCTION: get_command()
  * =============================================================================
  * This function is FULLY IMPLEMENTED for you. It handles user input and
  * interprets special command characters.
- * 
+ *
  * HOW TO USE:
  *   char input_buffer[MAX_MSG_DATA_SIZE];
  *   msg_cmd_t command;
@@ -212,7 +355,7 @@ void start_client(const char* addr, int port) {
  *   } else {
  *       // CMD_NO_EXEC means skip this command (like '?' for help)
  *   }
- * 
+ *
  * COMMAND FORMAT:
  *   Regular text      -> MSG_DATA (plain text message)
  *   !<message>        -> MSG_ENCRYPTED_DATA (encrypt the message)
@@ -220,11 +363,11 @@ void start_client(const char* addr, int port) {
  *   -                 -> MSG_CMD_CLIENT_STOP (exit client)
  *   =                 -> MSG_CMD_SERVER_STOP (shutdown server)
  *   ?                 -> Show help (returns CMD_NO_EXEC)
- * 
+ *
  * RETURN VALUES:
  *   CMD_EXECUTE  - Command should be sent to server (use cmd_id and cmd_line)
  *   CMD_NO_EXEC  - Command was handled locally (like help), don't send
- * 
+ *
  * IMPORTANT NOTES:
  *   - The returned cmd_line is a pointer into cmd_buff (no need to free)
  *   - For commands without data (like '#'), cmd_line will be NULL
@@ -236,13 +379,13 @@ int get_command(char *cmd_buff, size_t cmd_buff_sz, msg_cmd_t *msg_cmd)
 
     printf("> ");
     fflush(stdout);
-    
+
     // Get input from user
     if (fgets(cmd_buff, cmd_buff_sz, stdin) == NULL) {
         printf("[WARNING] Error reading input command.\n\n");
         return CMD_NO_EXEC;
     }
-    
+
     // Remove trailing newline
     cmd_buff[strcspn(cmd_buff, "\n")] = '\0';
 
@@ -253,32 +396,32 @@ int get_command(char *cmd_buff, size_t cmd_buff_sz, msg_cmd_t *msg_cmd)
             msg_cmd->cmd_id = MSG_ENCRYPTED_DATA;
             msg_cmd->cmd_line = cmd_buff + 1; // Skip the '!' character
             return CMD_EXECUTE;
-            
+
         case '#':
             // Key exchange request - no message data
             msg_cmd->cmd_id = MSG_KEY_EXCHANGE;
             msg_cmd->cmd_line = NULL;
             return CMD_EXECUTE;
-            
+
         case '$':
             // Digital signature (not implemented in this assignment)
             msg_cmd->cmd_id = MSG_DIG_SIGNATURE;
             msg_cmd->cmd_line = NULL;
             printf("[INFO] Digital signature command not implemented yet.\n\n");
             return CMD_NO_EXEC;
-            
+
         case '-':
             // Client exit command
             msg_cmd->cmd_id = MSG_CMD_CLIENT_STOP;
             msg_cmd->cmd_line = NULL;
             return CMD_EXECUTE;
-            
+
         case '=':
             // Server shutdown command
             msg_cmd->cmd_id = MSG_CMD_SERVER_STOP;
             msg_cmd->cmd_line = NULL;
             return CMD_EXECUTE;
-            
+
         case '?':
             // Help - display available commands
             msg_cmd->cmd_id = MSG_HELP_CMD;
@@ -291,13 +434,13 @@ int get_command(char *cmd_buff, size_t cmd_buff_sz, msg_cmd_t *msg_cmd)
             printf("  -          : Exit the client\n");
             printf("  =          : Exit the client and request server shutdown\n\n");
             return CMD_NO_EXEC;
-            
+
         default:
             // Regular text message
             msg_cmd->cmd_id = MSG_DATA;
             msg_cmd->cmd_line = cmd_buff;
             return CMD_EXECUTE;
     }
-    
+
     return CMD_NO_EXEC;
 }

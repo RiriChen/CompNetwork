@@ -17,7 +17,7 @@ $(TARGET): $(SOURCE)
 
 # Clean build artifacts
 clean:
-	rm -f $(TARGET) 
+	rm -f $(TARGET)
 
 # Run server for testing
 run-server: $(TARGET)

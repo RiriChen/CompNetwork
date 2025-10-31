@@ -106,24 +106,24 @@ Your answers will be evaluated on:
 
 Here's an example of how to structure a strong answer for Question 1:
 
-> **Opening Statement:** TCP is essential for this application because it provides a stateful, 
+> **Opening Statement:** TCP is essential for this application because it provides a stateful,
 > reliable connection that maintains the encryption session state throughout the communication.
 >
 > **Key Points with Explanation:**
-> - TCP's connection-oriented nature means the encryption keys, once exchanged, remain valid 
->   for the entire session. With UDP, each datagram is independent, so we'd need to either 
->   re-exchange keys with every message (inefficient and insecure) or somehow track session 
+> - TCP's connection-oriented nature means the encryption keys, once exchanged, remain valid
+>   for the entire session. With UDP, each datagram is independent, so we'd need to either
+>   re-exchange keys with every message (inefficient and insecure) or somehow track session
 >   state externally (complex).
 >
-> - TCP guarantees reliable, ordered delivery. If a key exchange message was lost (as could 
->   happen with UDP), the client and server would be out of sync - the client might try to 
+> - TCP guarantees reliable, ordered delivery. If a key exchange message was lost (as could
+>   happen with UDP), the client and server would be out of sync - the client might try to
 >   encrypt with a key it thinks it has, but the server never received the exchange request.
 >
-> - The stateful connection allows us to assume that once keys are exchanged, they persist 
+> - The stateful connection allows us to assume that once keys are exchanged, they persist
 >   until the connection closes. This is fundamental to the protocol design.
 >
-> **Conclusion/Summary:** Without TCP's stateful guarantees, we'd need to completely redesign 
-> our protocol to handle key management, message reliability, and session tracking - essentially 
+> **Conclusion/Summary:** Without TCP's stateful guarantees, we'd need to completely redesign
+> our protocol to handle key management, message reliability, and session tracking - essentially
 > reimplementing TCP's features at the application layer.
 
 ---

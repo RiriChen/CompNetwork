@@ -4,7 +4,7 @@
 #define MSG_KEY_EXCHANGE        1
 #define MSG_DATA                2
 #define MSG_ENCRYPTED_DATA      3
-#define MSG_DIG_SIGNATURE       4 
+#define MSG_DIG_SIGNATURE       4
 #define MSG_HELP_CMD            5
 #define MSG_CMD_CLIENT_STOP     6
 #define MSG_CMD_SERVER_STOP     7
