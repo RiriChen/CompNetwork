@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 
 #define  BUFF_SZ            1024
 #define  MAX_REOPEN_TRIES   5
@@ -12,30 +13,30 @@
 char recv_buff[BUFF_SZ];
 
 char *generate_cc_request(const char *host, int port, const char *path){
-	static char req[512] = {0};
-	int offset = 0;
-	
-    //note that all paths should start with "/" when passed in
-	offset += sprintf((char *)(req + offset),"GET %s HTTP/1.1\r\n", path);
-	offset += sprintf((char *)(req + offset),"Host: %s\r\n", host);
-	offset += sprintf((char *)(req + offset),"Connection: Keep-Alive\r\n");
-	offset += sprintf((char *)(req + offset),"\r\n");
+    static char req[512] = {0};
+    int offset = 0;
 
-	printf("DEBUG: %s", req);
-	return req;
+    //note that all paths should start with "/" when passed in
+    offset += sprintf((char *)(req + offset),"GET %s HTTP/1.1\r\n", path);
+    offset += sprintf((char *)(req + offset),"Host: %s\r\n", host);
+    offset += sprintf((char *)(req + offset),"Connection: Keep-Alive\r\n");
+    offset += sprintf((char *)(req + offset),"\r\n");
+
+    printf("DEBUG: %s", req);
+    return req;
 }
 
 
 void print_usage(char *exe_name){
     fprintf(stderr, "Usage: %s <hostname> <port> <path...>\n", exe_name);
-    fprintf(stderr, "Using default host %s, port %d  and path [\\]\n", DEFAULT_HOST, DEFAULT_PORT); 
+    fprintf(stderr, "Using default host %s, port %d  and path [\\]\n", DEFAULT_HOST, DEFAULT_PORT);
 }
 
 int reopen_socket(const char *host, uint16_t port) {
     int sock = 0;
 
     //----------------------------------------------------------------------------
-    //TODO: Implement a loop that attempts a certain number of times to open a 
+    //TODO: Implement a loop that attempts a certain number of times to open a
     //      socket with the host and port that is passed in as parameters.
     //
     //      I created a constant called MAX_REOPEN_TRIES (currently set to 5)
@@ -44,8 +45,8 @@ int reopen_socket(const char *host, uint16_t port) {
     //
     //      What you need to do:
     //          1. Create a loop that loops MAX_REOPEN_TRIES
-    //          2. In the body of the loop attempt to connect to the server.  
-    //             use the sock = socket_connect(host,port)  function to 
+    //          2. In the body of the loop attempt to connect to the server.
+    //             use the sock = socket_connect(host,port)  function to
     //             do this.
     //          3. The socket_connect function will return a negative number if
     //             the socket_connect() function fails.  Continue looping if this
@@ -53,10 +54,18 @@ int reopen_socket(const char *host, uint16_t port) {
     //          4. If socket_connect() returns a positive number it is a valid
     //             socket so just return it, e.g., return sock
     //          5. If we fall out of the loop, we are unable to connect, return
-    //             -1 to indicate a failure. 
+    //             -1 to indicate a failure.
     //----------------------------------------------------------------------------
+    for(int i = 0; i < MAX_REOPEN_TRIES; i++) {
+        sock = socket_connect(host, port);
+        if(sock > 0) {
+            fprintf(stdout, "Successfully reconnected on attempt %d\n", i + 1);
+            return sock;
+        }
+    }
 
-    
+    fprintf(stderr, "Failed to reconnect after %d attempts\n", MAX_REOPEN_TRIES);
+
     return -1;
 }
 
@@ -69,12 +78,12 @@ void server_disconnect(int sock){
 }
 
 int submit_request(int sock, const char *host, uint16_t port, char *resource){
-    int sent_bytes = 0; 
+    int sent_bytes = 0;
 
     const char *req = generate_cc_request(host, port, resource);
     int send_sz = strlen(req);
 
-    // This is the initial send, this is where the send will fail with 
+    // This is the initial send, this is where the send will fail with
     // Keep-Alive if the server closed the socket, sent_bytes will have
     // the number of bytes sent, which should equal send_sz if all went
     // well.  If sent_bytes < 0, this indicates a send error, so we will
@@ -89,33 +98,37 @@ int submit_request(int sock, const char *host, uint16_t port, char *resource){
         //
         // The variable sock needs to be reset to a new socket with the server.
         // 1.  Use the sock = reopen_socket() helper you implemented above in an attempt
-        //     to reopen_the socket.  If it returns a value less than zero, a socket 
+        //     to reopen_the socket.  If it returns a value less than zero, a socket
         //     could not be created so return the negative value and exit the function,
         //     e.g., return sock
         //
         //  2. Assuming you got a valid socket, reissue the send again
         //     sent_bytes = send(sock, req, send_sz,0);
         //----------------------------------------------------------------------------
-        
-        return -1;  //remove this line of code, i just want this to compile so the
-                    //block of code needs at least one line
+        sock = reopen_socket(host, port);
+        if(sock < 0) {
+            fprintf(stderr, "Failed to reopen socket\n");
+            return sock;
+        }
+
+        sent_bytes = send(sock, req, send_sz, 0);
     }
 
-    //This should not happen, but just checking if we didnt send everything and 
-    //handling appropriately 
+    //This should not happen, but just checking if we didnt send everything and
+    //handling appropriately
     if(sent_bytes != send_sz){
         if(sent_bytes < 0)
             perror("send failed after reconnect attempt");
         else
             fprintf(stderr, "Sent bytes %d is not equal to sent size %d\n", sent_bytes, send_sz);
-        
+
         close(sock);
         return -1;
     }
 
     int bytes_recvd = 0;    //used to track amount of data received on each recv() call
     int total_bytes = 0;    //used to accumulate the total number of bytes across all recv() calls
-    
+
     //do the first recv
     bytes_recvd = recv(sock, recv_buff, sizeof(recv_buff),0);
     if(bytes_recvd < 0) {
@@ -136,8 +149,12 @@ int submit_request(int sock, const char *host, uint16_t port, char *resource){
     //          a. close the socket -- close(sock)
     //          b. return -1 to exit this function
     //--------------------------------------------------------------------------------
-    int header_len = 0;     //change this to get the header len as per the directions above
-    
+    int header_len = get_http_header_len(recv_buff, bytes_recvd);
+    if(header_len < 0) {
+        fprintf(stderr, "Failed to parse HTTP header\n");
+        close(sock);
+        return -1;
+    }
 
     //--------------------------------------------------------------------------------
     //TODO:  Get the conetent len
@@ -148,17 +165,23 @@ int submit_request(int sock, const char *host, uint16_t port, char *resource){
     // cannot find a Content-Length header, its assumed as per the HTTP spec that ther
     // is no body, AKA, content_len is zero;
     //--------------------------------------------------------------------------------
-    int content_len = 0;    //Change this to get the content length
+    int content_len = get_http_content_len(recv_buff, header_len);
 
     //--------------------------------------------------------------------------------
     // TODO:  Make sure you understand the calculations below
     //
-    // You do not have to write any code, but add to this comment your thoughts on 
+    // You do not have to write any code, but add to this comment your thoughts on
     // what the following 2 lines of code do to track the amount of data received
     // from the server
     //
-    // YOUR ANSWER:  <START-YOUR-RESPONSE-HERE>
-    //
+    // YOUR ANSWER:
+    // `initial_data`: This is the amount of body data in the first recv. We subtract
+    // the header_len from total bytes_recvd to get just the body portion.
+    // `bytes_remaining`: This is how much more body data we still need to receive.
+    // We subtract the initial_data we already have from the total content_len
+    // to determine what's left to receive in subsequent recv() calls. This tracking
+    // is essential for Keep-Alive because we must receive exactly content_len bytes
+    // before the next request can be sent on the same socket.
     //--------------------------------------------------------------------------------
     int initial_data =  bytes_recvd - header_len;
     int bytes_remaining = content_len - initial_data;
@@ -177,8 +200,13 @@ int submit_request(int sock, const char *host, uint16_t port, char *resource){
         //      a. close the socket (sock)
         //      b. return -1 to indicate an error
         //-----------------------------------------------------------------------------
-        bytes_recvd = 0; // replace with a valid recv(...); call
-        
+        bytes_recvd = recv(sock, recv_buff, sizeof(recv_buff), 0);
+        if(bytes_recvd < 0) {
+            perror("recv failed");
+            close(sock);
+            return -1;
+        }
+
         //You can uncomment out the fprintf() calls below to see what is going on
 
         //fprintf(stdout, "%.*s", bytes_recvd, recv_buff);
@@ -199,13 +227,20 @@ int submit_request(int sock, const char *host, uint16_t port, char *resource){
     // You dont have any code to change, but explain why this function, if it gets to this
     // point returns an active socket.
     //
-    // YOUR ANSWER:  <START-YOUR-RESPONSE-HERE>
-    //
+    // YOUR ANSWER:
+    // This function returns the active socket (rather than just closing it) because
+    // we are using the Keep-Alive protocol. With Keep-Alive, the same socket can and
+    // should be reused for multiple HTTP requests to the same server. This improves
+    // performance by avoiding the overhead of establishing a new TCP connection for
+    // each request.
     //--------------------------------------------------------------------------------
     return sock;
 }
 
 int main(int argc, char *argv[]){
+    clock_t start, end;
+    start = clock();
+
     int sock;
 
     const char *host = DEFAULT_HOST;
@@ -221,7 +256,7 @@ int main(int argc, char *argv[]){
         print_usage(argv[0]);
         //process the default request
         submit_request(sock, host, port, resource);
-	} else {
+    } else {
         host = argv[1];
         port = atoi(argv[2]);
         resource = argv[3];
@@ -239,4 +274,8 @@ int main(int argc, char *argv[]){
     }
 
     server_disconnect(sock);
+
+    end = clock();
+    double cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("\n\nProgram execution time: %.6f seconds\n", cpu_time_used);
 }
