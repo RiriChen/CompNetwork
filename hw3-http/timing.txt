@@ -1,0 +1,15 @@
+# HTTP Client Timing Analysis
+
+## Test Results
+
+### Connection: Close (`client-cc`)
+- Single request (`make run-cc-cci`): **0.000788 seconds**
+- Three requests (`make run-cc3-cci`): **0.001431 seconds**
+
+### Connection: Keep-Alive (`client-ka`)
+- Single request (`make run-ka-cci`): **0.000439 seconds**
+- Three requests (`make run-ka3-cci`): **0.000661 seconds**
+
+## Results and Conclusion
+
+I saw significant improved response time (~50% faster) with "Connection: Keep-Alive" compared to "Connection: Close". Keep-Alive performed better because it reuses the same TCP socket for multiple requests, while "Connection: Close" opens a new socket for each request. The process of making a request consists of creating a new socket, performing a TCP three-way handshake (SYN, SYN-ACK, ACK), send the HTTP request, receive the response, and then finally close the socket. With three requests, "Connection: Close" repeats the aforementioned steps 3 times, establishing 3 separate connections. Keep-Alive only establishes the connection once, then reuses that socket for all 3 requests.
