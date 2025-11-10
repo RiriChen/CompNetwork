@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define     DEFAULT_HOST    "httpbin.org"
-#define     DEFAULT_HOST_2  "cci-p141.cci.drexel.edu"
+//#define     DEFAULT_HOST    "httpbin.org"
+#define     DEFAULT_HOST    "cci-p141.cci.drexel.edu"
 #define     DEFAULT_PORT    80
 #define     DEFAULT_PATH    "/"
 
@@ -17,7 +17,7 @@
 
 //THE HTTP HEADER ENDS WITH \r\n\r\n.  This is because the last key:value pair ends with \r\n
 //and the spec states the end of the headers is \r\n - so there will be 2 in a row
-#define     HTTP_HEADER_END "\r\n\r\n"      
+#define     HTTP_HEADER_END "\r\n\r\n"
 
 //Exported funcitons
 int socket_connect(const char *host, uint16_t port);
