@@ -1,4 +1,4 @@
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -29,7 +29,7 @@ void dpclose(dp_connp dpsession) {
     free(dpsession);
 }
 
-int  dpmaxdgram(){
+int dpmaxdgram(){
     return DP_MAX_BUFF_SZ;
 }
 
@@ -41,24 +41,24 @@ dp_connp dpServerInit(int port) {
 
     dp_connp dpc = dpinit();
     if (dpc == NULL) {
-        perror("drexel protocol create failure"); 
+        perror("drexel protocol create failure");
         return NULL;
     }
 
     sock = &(dpc->udp_sock);
     servaddr = &(dpc->inSockAddr.addr);
-        
 
-    // Creating socket file descriptor 
-    if ( (*sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
-        perror("socket creation failed"); 
+
+    // Creating socket file descriptor
+    if ( (*sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        perror("socket creation failed");
         return NULL;
-    } 
+    }
 
-    // Filling server information 
-    servaddr->sin_family    = AF_INET; // IPv4 
-    servaddr->sin_addr.s_addr = INADDR_ANY; 
-    servaddr->sin_port = htons(port); 
+    // Filling server information
+    servaddr->sin_family    = AF_INET; // IPv4
+    servaddr->sin_addr.s_addr = INADDR_ANY;
+    servaddr->sin_port = htons(port);
 
     // Set socket options so that we dont have to wait for ports held by OS
     // if (setsockopt(*sock, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof(int)) < 0){
@@ -71,13 +71,13 @@ dp_connp dpServerInit(int port) {
         close(*sock);
         return NULL;
     }
-    if ( (rc = bind(*sock, (const struct sockaddr *)servaddr,  
-            dpc->inSockAddr.len)) < 0 ) 
-    { 
-        perror("bind failed"); 
+    if ( (rc = bind(*sock, (const struct sockaddr *)servaddr,
+            dpc->inSockAddr.len)) < 0 )
+    {
+        perror("bind failed");
         close (*sock);
         return NULL;
-    } 
+    }
 
     dpc->inSockAddr.isAddrInit = true;
     dpc->outSockAddr.len = sizeof(struct sockaddr_in);
@@ -91,24 +91,24 @@ dp_connp dpClientInit(char *addr, int port) {
 
     dp_connp dpc = dpinit();
     if (dpc == NULL) {
-        perror("drexel protocol create failure"); 
+        perror("drexel protocol create failure");
         return NULL;
     }
 
     sock = &(dpc->udp_sock);
     servaddr = &(dpc->outSockAddr.addr);
 
-    // Creating socket file descriptor 
-    if ( (*sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
-        perror("socket creation failed"); 
+    // Creating socket file descriptor
+    if ( (*sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        perror("socket creation failed");
         return NULL;
-    } 
+    }
 
-    // Filling server information 
-    servaddr->sin_family = AF_INET; 
-    servaddr->sin_port = htons(port); 
+    // Filling server information
+    servaddr->sin_family = AF_INET;
+    servaddr->sin_port = htons(port);
     servaddr->sin_addr.s_addr = inet_addr(addr);
-    dpc->outSockAddr.len = sizeof(struct sockaddr_in); 
+    dpc->outSockAddr.len = sizeof(struct sockaddr_in);
     dpc->outSockAddr.isAddrInit = true;
 
     // The inbound address is the same as the outbound address
@@ -119,18 +119,38 @@ dp_connp dpClientInit(char *addr, int port) {
 
 
 int dprecv(dp_connp dp, void *buff, int buff_sz){
-
+    int recv = 0;
+    char *buf = (char *)buff;
     dp_pdu *inPdu;
-    int rcvLen = dprecvdgram(dp, _dpBuffer, sizeof(_dpBuffer));
 
-    if(rcvLen == DP_CONNECTION_CLOSED)
-        return DP_CONNECTION_CLOSED;
+    while(recv < buff_sz) {
+        int rcvLen = dprecvdgram(dp, _dpBuffer, sizeof(_dpBuffer));
 
-    inPdu = (dp_pdu *)_dpBuffer;
-    if(rcvLen > sizeof(dp_pdu))
-        memcpy(buff, (_dpBuffer+sizeof(dp_pdu)), inPdu->dgram_sz);
+        if(rcvLen == DP_CONNECTION_CLOSED) {
+            return DP_CONNECTION_CLOSED;
+        }
+        else if (rcvLen < 0) {
+            return rcvLen;
+        }
 
-    return inPdu->dgram_sz;
+        inPdu = (dp_pdu *)_dpBuffer;
+
+        int chunk = inPdu->dgram_sz;
+        if(recv + chunk > buff_sz) {
+            chunk = buff_sz - recv;
+        }
+
+        if(rcvLen > sizeof(dp_pdu) && chunk > 0) {
+            memcpy(buf + recv, (_dpBuffer + sizeof(dp_pdu)), chunk);
+            recv += chunk;
+        }
+
+        if(inPdu->dgram_sz < DP_MAX_BUFF_SZ) {
+            break;
+        }
+    }
+
+    return recv;
 }
 
 
@@ -154,8 +174,8 @@ static int dprecvdgram(dp_connp dp, void *buff, int buff_sz){
 
     //Copy buffer back
     // memcpy(buff, (_dpBuffer+sizeof(dp_pdu)), inPdu.dgram_sz);
-    
-    
+
+
     //UDPATE SEQ NUMBER AND PREPARE ACK
     if (errCode == DP_NO_ERROR){
         if(inPdu.dgram_sz == 0)
@@ -218,9 +238,9 @@ static int dprecvraw(dp_connp dp, void *buff, int buff_sz){
         return -1;
     }
 
-    bytes = recvfrom(dp->udp_sock, (char *)buff, buff_sz,  
-                MSG_WAITALL, ( struct sockaddr *) &(dp->outSockAddr.addr), 
-                &(dp->outSockAddr.len)); 
+    bytes = recvfrom(dp->udp_sock, (char *)buff, buff_sz,
+                MSG_WAITALL, ( struct sockaddr *) &(dp->outSockAddr.addr),
+                &(dp->outSockAddr.len));
 
     if (bytes < 0) {
         perror("dprecv: received error from recvfrom()");
@@ -233,28 +253,36 @@ static int dprecvraw(dp_connp dp, void *buff, int buff_sz){
         if(false) {                         //just diabling for now
             dp_pdu *inPdu = buff;
             char * payload = (char *)buff + sizeof(dp_pdu);
-            printf("DATA : %.*s\n", inPdu->dgram_sz , payload); 
+            printf("DATA : %.*s\n", inPdu->dgram_sz , payload);
         }
     }
 
     dp_pdu *inPdu = buff;
     print_in_pdu(inPdu);
 
-    //return the number of bytes received 
+    //return the number of bytes received
     return bytes;
 }
 
 int dpsend(dp_connp dp, void *sbuff, int sbuff_sz){
+    int sent = 0;
+    int chunk;
+    char *buf = (char *)sbuff;
 
+    while(sent < sbuff_sz) {
+        chunk = sbuff_sz - sent;
+        if(chunk > DP_MAX_BUFF_SZ)
+            chunk = DP_MAX_BUFF_SZ;
 
-    //For now, we will not be able to send larger than the biggest datagram
-    if(sbuff_sz > dpmaxdgram()) {
-        return DP_BUFF_UNDERSIZED;
+        int sndSz = dpsenddgram(dp, buf + sent, chunk);
+
+        if(sndSz < 0)
+            return sndSz;
+
+        sent += sndSz;
     }
 
-    int sndSz = dpsenddgram(dp, sbuff, sbuff_sz);
-
-    return sndSz;
+    return sent;
 }
 
 static int dpsenddgram(dp_connp dp, void *sbuff, int sbuff_sz){
@@ -312,11 +340,11 @@ static int dpsendraw(dp_connp dp, void *sbuff, int sbuff_sz){
     }
 
     dp_pdu *outPdu = sbuff;
-    bytesOut = sendto(dp->udp_sock, (const char *)sbuff, sbuff_sz, 
-        0, (const struct sockaddr *) &(dp->outSockAddr.addr), 
-            dp->outSockAddr.len); 
+    bytesOut = sendto(dp->udp_sock, (const char *)sbuff, sbuff_sz,
+        0, (const struct sockaddr *) &(dp->outSockAddr.addr),
+            dp->outSockAddr.len);
 
-    
+
     print_out_pdu(outPdu);
 
     return bytesOut;
@@ -343,14 +371,14 @@ int dplisten(dp_connp dp) {
     pdu.mtype = DP_MT_CNTACK;
     dp->seqNum = pdu.seqnum + 1;
     pdu.seqnum = dp->seqNum;
-    
+
     sndSz = dpsendraw(dp, &pdu, sizeof(pdu));
-    
+
     if (sndSz != sizeof(pdu)) {
         perror("dplisten:The wrong number of bytes were sent");
         return DP_ERROR_GENERAL;
     }
-    dp->isConnected = true; 
+    dp->isConnected = true;
     //For non data transmissions, ACK of just control data increase seq # by one
     printf("Connection established OK!\n");
 
@@ -376,7 +404,7 @@ int dpconnect(dp_connp dp) {
         perror("dpconnect:Wrong about of connection data sent");
         return -1;
     }
-    
+
     rcvSz = dprecvraw(dp, &pdu, sizeof(pdu));
     if (rcvSz != sizeof(dp_pdu)) {
         perror("dpconnect:Wrong about of connection data received");
@@ -410,14 +438,14 @@ int dpdisconnect(dp_connp dp) {
         perror("dpdisconnect:Wrong about of connection data sent");
         return DP_ERROR_GENERAL;
     }
-    
+
     rcvSz = dprecvraw(dp, &pdu, sizeof(pdu));
     if (rcvSz != sizeof(dp_pdu)) {
         perror("dpdisconnect:Wrong about of connection data received");
         return DP_ERROR_GENERAL;
     }
     if (pdu.mtype != DP_MT_CLOSEACK) {
-        perror("dpdisconnect:Expected CNTACT Message but didnt get it"); 
+        perror("dpdisconnect:Expected CNTACT Message but didnt get it");
         return DP_ERROR_GENERAL;
     }
     //For non data transmissions, ACK of just control data increase seq # by one
@@ -452,7 +480,7 @@ void print_in_pdu(dp_pdu *pdu) {
     print_pdu_details(pdu);
 }
 static void print_pdu_details(dp_pdu *pdu){
-    
+
     printf("\tVersion:  %d\n", pdu->proto_ver);
     printf("\tMsg Type: %s\n", pdu_msg_to_string(pdu));
     printf("\tMsg Size: %d\n", pdu->dgram_sz);
@@ -463,23 +491,23 @@ static void print_pdu_details(dp_pdu *pdu){
 static char * pdu_msg_to_string(dp_pdu *pdu) {
     switch(pdu->mtype){
         case DP_MT_ACK:
-            return "ACK";     
+            return "ACK";
         case DP_MT_SND:
-            return "SEND";      
+            return "SEND";
         case DP_MT_CONNECT:
-            return "CONNECT";   
+            return "CONNECT";
         case DP_MT_CLOSE:
-            return "CLOSE";     
+            return "CLOSE";
         case DP_MT_NACK:
-            return "NACK";      
+            return "NACK";
         case DP_MT_SNDACK:
-            return "SEND/ACK";    
+            return "SEND/ACK";
         case DP_MT_CNTACK:
-            return "CONNECT/ACK";    
+            return "CONNECT/ACK";
         case DP_MT_CLOSEACK:
             return "CLOSE/ACK";
         default:
-            return "***UNKNOWN***";  
+            return "***UNKNOWN***";
     }
 }
 
@@ -492,13 +520,13 @@ static char * pdu_msg_to_string(dp_pdu *pdu) {
  *      if (1 <= threshold <= 99) it generates a random number between
  *          1..100 and if the random number is less than the threshold
  *          it returns TRUE, else it returns false
- * 
+ *
  *  Example: dprand(50) is a coin flip
  *              dprand(25) will return true 25% of the time
  *              dprand(99) will return true 99% of the time
  */
-int dprand(int threshold){
-
+int dprand(int threshold)
+{
     if (threshold < 1)
         return 0;
     if (threshold > 99)
@@ -512,4 +540,3 @@ int dprand(int threshold){
     else
         return 0;
 }
-

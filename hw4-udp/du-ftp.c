@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <unistd.h> 
+#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -9,7 +9,7 @@
 #include "du-proto.h"
 
 
-#define BUFF_SZ 512
+#define BUFF_SZ 2048
 static char sbuffer[BUFF_SZ];
 static char rbuffer[BUFF_SZ];
 static char full_file_path[FNAME_SZ];
@@ -22,7 +22,7 @@ static char full_file_path[FNAME_SZ];
  *  -p flag is for a "pong message", in other words the server echos
  *  back what the client sends, and a -c message, the -c option takes
  *  a course id, and the server looks up the course id and responds
- *  with an appropriate message. 
+ *  with an appropriate message.
  */
 static int initParams(int argc, char *argv[], prog_config *cfg){
     int option;
@@ -34,7 +34,7 @@ static int initParams(int argc, char *argv[], prog_config *cfg){
     cfg->port_number = DEF_PORT_NO;
     strcpy(cfg->file_name, PROG_DEF_FNAME);
     strcpy(cfg->svr_ip_addr, PROG_DEF_SVR_ADDR);
-    
+
     while ((option = getopt(argc, argv, ":p:f:a:csh")) != -1){
         switch(option) {
             case 'p':
@@ -98,7 +98,7 @@ int server_loop(dp_connp dpc, void *sBuff, void *rBuff, int sbuff_sz, int rbuff_
         fwrite(rBuff, 1, rcvSz, f);
         rcvSz = rcvSz > 50 ? 50 : rcvSz;    //Just print the first 50 characters max
 
-        printf("========================> \n%.*s\n========================> \n", 
+        printf("========================> \n%.*s\n========================> \n",
             rcvSz, (char *)rBuff);
     }
 
@@ -107,7 +107,7 @@ int server_loop(dp_connp dpc, void *sBuff, void *rBuff, int sbuff_sz, int rbuff_
 
 
 void start_client(dp_connp dpc){
-    static char sBuff[500];
+    static char sBuff[BUFF_SZ];
 
     if(!dpc->isConnected) {
         printf("Client not connected\n");
@@ -146,7 +146,6 @@ int main(int argc, char *argv[])
     dp_connp dpc;
     int rc;
 
-
     //Process the parameters and init the header - look at the helpers
     //in the cs472-pproto.c file
     cmd = initParams(argc, argv, &cfg);
@@ -182,6 +181,7 @@ int main(int argc, char *argv[])
 
             start_server(dpc);
             break;
+
         default:
             printf("ERROR: Unknown Program Mode.  Mode set is %d\n", cmd);
             break;
